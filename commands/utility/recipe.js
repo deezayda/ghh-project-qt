@@ -88,6 +88,7 @@ async function pageNav(interaction, recipes) {
     });
 }
 
+// use the Spoonacular API to find recipes from the given ingredients //
 async function getRecipes(ingredients) {
     const apiKey  = config.apiKey; 
     const url = `https://api.spoonacular.com/recipes/findByIngredients?ingredients=${ingredients}&number=5&ranking=1&apiKey=${apiKey}`;
