@@ -90,7 +90,7 @@ async function pageNav(interaction, recipes) {
 
 async function getRecipes(ingredients) {
     const apiKey  = config.apiKey; 
-    const url = `https://api.spoonacular.com/recipes/findByIngredients?ingredients=${ingredients}&number=5&apiKey=${apiKey}`;
+    const url = `https://api.spoonacular.com/recipes/findByIngredients?ingredients=${ingredients}&number=5&ranking=1&apiKey=${apiKey}`;
 
     try {
         const response = await fetch(url);
