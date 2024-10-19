@@ -5,25 +5,24 @@ const config = require('../../config.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('recipe')
-        .setDescription('Find possible recipes with available ingredients or get details for a recipe by ID!')
+        .setDescription('Find possible recipes with available ingredients or get more info on a recipe via its ID')
         .addStringOption(option => 
             option.setName('ingredients')
                 .setDescription('Enter the ingredients you have – separated by commas')
-                .setRequired(false)) // Made ingredients optional
+                .setRequired(false))
         .addIntegerOption(option => 
-            option.setName('id')
-                .setDescription('The recipe ID to fetch details for')
-                .setRequired(false)), // Made recipe ID optional
+            option.setName('recipe ID')
+                .setDescription("Enter the unique ID for the recipe you're searching for")
+                .setRequired(false)), 
     
-    async execute(interaction) {
+    async execute(interaction){
         const ingredients = interaction.options.getString('ingredients');
-        const recipeId = interaction.options.getInteger('id');
+        const recipeId = interaction.options.getInteger('recipe ID');
 
-        if (recipeId) {
-            // If a recipe ID is provided, fetch and display the recipe details
+        if (recipeId){
             const recipeDetails = await getRecipeDetails(recipeId);
-            if (!recipeDetails) {
-                await interaction.reply('Sorry, no details found for the given recipe ID.');
+            if (!recipeDetails){
+                await interaction.reply('No details found for the given recipe ID');
                 return;
             }
 
@@ -35,13 +34,13 @@ module.exports = {
                 .setTimestamp();
             
             await interaction.reply({ embeds: [embed] });
-        } else if (ingredients) {
-            // If no ID is provided but ingredients are given, search for recipes
+        } 
+        else if (ingredients){
             await interaction.reply(`Searching for recipes with: ${ingredients}`);
             const recipes = await getRecipes(ingredients);
-            const limitedRecipes = recipes.slice(0, 5); // Limit to 5 results
+            const limitedRecipes = recipes.slice(0, 5);
 
-            if (limitedRecipes.length > 0) {
+            if (limitedRecipes.length > 0){
                 const embed = embedDisplay(limitedRecipes[0], 1, limitedRecipes.length);
                 const row = new ActionRowBuilder()
                     .addComponents(
@@ -58,16 +57,18 @@ module.exports = {
 
                 await interaction.followUp({ embeds: [embed], components: [row] });
                 pageNav(interaction, limitedRecipes);
-            } else {
-                await interaction.followUp('Sorry, no recipes were found with the listed ingredients.');
+            } 
+            else{
+                await interaction.followUp('No recipes were found with the given ingredients');
             }
-        } else {
+        } 
+        else{
             await interaction.reply('Please provide either ingredients or a recipe ID.');
         }
     },
 };
 
-function embedDisplay(recipe, currentIndex, totalRecipes) {
+function embedDisplay(recipe, currentIndex, totalRecipes){
     const ingredientsList = recipe.ingredients && recipe.ingredients.length > 0 
         ? recipe.ingredients.join(', ') : 'Ingredients data not available';
 
@@ -79,15 +80,16 @@ function embedDisplay(recipe, currentIndex, totalRecipes) {
     return embed;
 }
 
-async function pageNav(interaction, recipes) {
+async function pageNav(interaction, recipes){
     let currentIndex = 0;
     const filter = i => ['prev', 'next'].includes(i.customId) && i.user.id === interaction.user.id;
     const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 });
 
     collector.on('collect', async i => {
-        if (i.customId === 'next') {
+        if (i.customId === 'next'){
             currentIndex = Math.min(currentIndex + 1, recipes.length - 1);
-        } else if (i.customId === 'prev') {
+        } 
+        else if (i.customId === 'prev'){
             currentIndex = Math.max(currentIndex - 1, 0);
         }
 
@@ -109,11 +111,12 @@ async function pageNav(interaction, recipes) {
     });
 }
 
-async function getRecipes(ingredients) {
+
+async function getRecipes(ingredients){
     const apiKey = config.apiKey; 
     const url = `https://api.spoonacular.com/recipes/findByIngredients?ingredients=${ingredients}&number=5&ranking=1&apiKey=${apiKey}`;
 
-    try {
+    try{
         const response = await fetch(url);
         const recipes = await response.json();
 
@@ -132,25 +135,28 @@ async function getRecipes(ingredients) {
         }));
 
         return detailedRecipes;
-    } catch (error) {
+    } 
+    catch (error){
         console.error('Error fetching recipes:', error);
         return [];
     }
 }
 
-// Use the Spoonacular API to find details of the recipe by ID
-async function getRecipeDetails(recipeId) {
+
+// access Spoonacular API to find recipes and recipe IDs from given ingredients //
+async function getRecipeDetails(recipeId){
     const apiKey = config.apiKey;
     const url = `https://api.spoonacular.com/recipes/${recipeId}/information?apiKey=${apiKey}`;
 
-    try {
+    try{
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`API error: ${response.statusText}`);
         }
         const recipe = await response.json();
         return recipe;
-    } catch (error) {
+    } 
+    catch (error){
         console.error('Error fetching recipe details:', error);
         return null;
     }
