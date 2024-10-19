@@ -39,7 +39,7 @@ module.exports = {
 
             // Format the recipe data for the Discord response
             const recipeList = recipes.map((recipe, index) => 
-                `${index + 1}. [${recipe.title}](https://spoonacular.com/recipes/${recipe.id})`
+                `${index + 1}. [${recipe.title}](https://spoonacular.com/recipes/${recipe.id}/information?apiKey=${config.spoonacularAPI})`
             ).join('\n');
 
             // Reply to the interaction with the formatted recipe list
