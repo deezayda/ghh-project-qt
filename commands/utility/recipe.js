@@ -5,41 +5,64 @@ const config = require('../../config.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('recipe')
-        .setDescription('Find possible recipes with available ingredients!')
+        .setDescription('Find possible recipes with available ingredients or get details for a recipe by ID!')
         .addStringOption(option => 
             option.setName('ingredients')
                 .setDescription('Enter the ingredients you have – separated by commas')
-                .setRequired(true)),
+                .setRequired(false)) // Made ingredients optional
+        .addIntegerOption(option => 
+            option.setName('id')
+                .setDescription('The recipe ID to fetch details for')
+                .setRequired(false)), // Made recipe ID optional
     
     async execute(interaction) {
         const ingredients = interaction.options.getString('ingredients');
-        await interaction.reply(`Searching for recipes with: ${ingredients}`);
+        const recipeId = interaction.options.getInteger('id');
 
-        const recipes = await getRecipes(ingredients);
-        const limitedRecipes = recipes.slice(0, 5); // 5 per query
-        
-        if (limitedRecipes.length > 0) {
-            // embedded display instead of just text //
-            const embed = embedDisplay(limitedRecipes[0], 1, limitedRecipes.length);
-            const row = new ActionRowBuilder()
-                .addComponents(
-                    new ButtonBuilder()
-                        .setCustomId('prev')
-                        .setLabel('Previous')
-                        .setStyle(ButtonStyle.Primary)
-                        .setDisabled(true),
-                    new ButtonBuilder()
-                        .setCustomId('next')
-                        .setLabel('Next')
-                        .setStyle(ButtonStyle.Primary)
-                );
+        if (recipeId) {
+            // If a recipe ID is provided, fetch and display the recipe details
+            const recipeDetails = await getRecipeDetails(recipeId);
+            if (!recipeDetails) {
+                await interaction.reply('Sorry, no details found for the given recipe ID.');
+                return;
+            }
 
-            await interaction.followUp({ embeds: [embed], components: [row] });
-            pageNav(interaction, limitedRecipes); // flipping b/w pgs – like recipe book
-        }
-        else {
-            await interaction.followUp('Sorry, no recipes were found with the listed ingredients.');
-            // potensh add a continuation like 'try again?' button click –> user input field
+            const embed = new EmbedBuilder()
+                .setTitle(recipeDetails.title || 'Title not available')
+                .setImage(recipeDetails.image || 'https://example.com/default-image.jpg')
+                .setDescription(`**Ingredients:**\n${recipeDetails.extendedIngredients.map(ing => `${ing.name}: ${ing.amount} ${ing.unit}`).join('\n')}\n\n**Instructions:**\n${recipeDetails.instructions || 'No instructions available.'}`)
+                .setFooter({ text: `Recipe ID: ${recipeDetails.id}` })
+                .setTimestamp();
+            
+            await interaction.reply({ embeds: [embed] });
+        } else if (ingredients) {
+            // If no ID is provided but ingredients are given, search for recipes
+            await interaction.reply(`Searching for recipes with: ${ingredients}`);
+            const recipes = await getRecipes(ingredients);
+            const limitedRecipes = recipes.slice(0, 5); // Limit to 5 results
+
+            if (limitedRecipes.length > 0) {
+                const embed = embedDisplay(limitedRecipes[0], 1, limitedRecipes.length);
+                const row = new ActionRowBuilder()
+                    .addComponents(
+                        new ButtonBuilder()
+                            .setCustomId('prev')
+                            .setLabel('Previous')
+                            .setStyle(ButtonStyle.Primary)
+                            .setDisabled(true),
+                        new ButtonBuilder()
+                            .setCustomId('next')
+                            .setLabel('Next')
+                            .setStyle(ButtonStyle.Primary)
+                    );
+
+                await interaction.followUp({ embeds: [embed], components: [row] });
+                pageNav(interaction, limitedRecipes);
+            } else {
+                await interaction.followUp('Sorry, no recipes were found with the listed ingredients.');
+            }
+        } else {
+            await interaction.reply('Please provide either ingredients or a recipe ID.');
         }
     },
 };
@@ -51,12 +74,11 @@ function embedDisplay(recipe, currentIndex, totalRecipes) {
     const embed = new EmbedBuilder()
         .setTitle(recipe.title || 'Title not available')
         .setImage(recipe.image || 'https://example.com/default-image.jpg')
-        .setDescription(`Ingredients: ${ingredientsList}`)
-        .setFooter({ text: `Recipe ${currentIndex} of ${totalRecipes}` });
+        .setDescription(`Ingredients: ${ingredientsList}\n\nFor more info, use /recipe id: ${recipe.id}`)
+        .setFooter({ text: `Recipe ${currentIndex} of ${totalRecipes} | ID: ${recipe.id}` });
     return embed;
 }
 
-// left and right buttons for page navigation //
 async function pageNav(interaction, recipes) {
     let currentIndex = 0;
     const filter = i => ['prev', 'next'].includes(i.customId) && i.user.id === interaction.user.id;
@@ -65,8 +87,7 @@ async function pageNav(interaction, recipes) {
     collector.on('collect', async i => {
         if (i.customId === 'next') {
             currentIndex = Math.min(currentIndex + 1, recipes.length - 1);
-        } 
-        else if (i.customId === 'prev') {
+        } else if (i.customId === 'prev') {
             currentIndex = Math.max(currentIndex - 1, 0);
         }
 
@@ -88,9 +109,8 @@ async function pageNav(interaction, recipes) {
     });
 }
 
-// use the Spoonacular API to find recipes from the given ingredients //
 async function getRecipes(ingredients) {
-    const apiKey  = config.apiKey; 
+    const apiKey = config.apiKey; 
     const url = `https://api.spoonacular.com/recipes/findByIngredients?ingredients=${ingredients}&number=5&ranking=1&apiKey=${apiKey}`;
 
     try {
@@ -106,7 +126,8 @@ async function getRecipes(ingredients) {
             return {
                 title: detailData.title,
                 image: detailData.image,
-                ingredients: detailData.extendedIngredients.map(ing => ing.name)
+                ingredients: detailData.extendedIngredients.map(ing => ing.name),
+                id: detailData.id // Include the ID for the embed
             };
         }));
 
@@ -114,5 +135,23 @@ async function getRecipes(ingredients) {
     } catch (error) {
         console.error('Error fetching recipes:', error);
         return [];
+    }
+}
+
+// Use the Spoonacular API to find details of the recipe by ID
+async function getRecipeDetails(recipeId) {
+    const apiKey = config.apiKey;
+    const url = `https://api.spoonacular.com/recipes/${recipeId}/information?apiKey=${apiKey}`;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`API error: ${response.statusText}`);
+        }
+        const recipe = await response.json();
+        return recipe;
+    } catch (error) {
+        console.error('Error fetching recipe details:', error);
+        return null;
     }
 }
