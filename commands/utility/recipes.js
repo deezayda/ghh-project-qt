@@ -12,6 +12,7 @@ async function getQuickRecipes() {
             params: {
                 maxReadyTime: maxReadyTime,
                 number: numberOfRecipes,
+                sort: 'random',
                 apiKey: config.spoonacularAPI  // Use your API key here
             }
         });
