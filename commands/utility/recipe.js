@@ -2,6 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const fetch = require('node-fetch');
 const config = require('../../config.json');
 
+
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('recipe')
@@ -12,6 +13,7 @@ module.exports = {
                 .setRequired(true)),
     
     async execute(interaction) {
+        console.log("GOING INTO EXECUTION")
         const ingredients = interaction.options.getString('ingredients');
         await interaction.reply(`Searching for recipes with: ${ingredients}`);
 
@@ -20,7 +22,9 @@ module.exports = {
         
         if (limitedRecipes.length > 0) {
             // embedded display instead of just text //
+            console.log("Before Embed Display")
             const embed = embedDisplay(limitedRecipes[0], 1, limitedRecipes.length);
+            console.log("After Embed Console")
             const row = new ActionRowBuilder()
                 .addComponents(
                     new ButtonBuilder()
@@ -51,7 +55,10 @@ function embedDisplay(recipe, currentIndex, totalRecipes) {
     const embed = new EmbedBuilder()
         .setTitle(recipe.title || 'Title not available')
         .setImage(recipe.image || 'https://example.com/default-image.jpg')
-        .setDescription(`Ingredients: ${ingredientsList}`)
+        // .setDescription(`Ingredients: ${ingredientsList}`)
+        // .setFooter({ text: `Recipe ${currentIndex} of ${totalRecipes}` });
+        .setDescription(`**Ingredients**: ${ingredientsList}\n\n**Instructions**: ${recipe.instructions}`)
+        .setURL(recipe.sourceUrl) // Makes the title clickable with the link to the source
         .setFooter({ text: `Recipe ${currentIndex} of ${totalRecipes}` });
     return embed;
 }
@@ -90,7 +97,7 @@ async function pageNav(interaction, recipes) {
 
 async function getRecipes(ingredients) {
     const apiKey  = config.apiKey; 
-    const url = `https://api.spoonacular.com/recipes/findByIngredients?ingredients=${ingredients}&number=5&ranking=1&apiKey=${apiKey}`;
+    const url = `https://api.spoonacular.com/recipes/findByIngredients?ingredients=${ingredients}&number=5&apiKey=${apiKey}`;
 
     try {
         const response = await fetch(url);
@@ -105,13 +112,17 @@ async function getRecipes(ingredients) {
             return {
                 title: detailData.title,
                 image: detailData.image,
-                ingredients: detailData.extendedIngredients.map(ing => ing.name)
+                ingredients: detailData.extendedIngredients.map(ing => ing.name),
+                instructions: detailData.instructions || 'Instructions not available', // Fetching instructions
+                sourceUrl: detailData.sourceUrl || 'URL not available' // Fetching source URL
             };
         }));
-
+        console.log('End of Get Recipes Function')
         return detailedRecipes;
     } catch (error) {
         console.error('Error fetching recipes:', error);
         return [];
     }
 }
+
+
