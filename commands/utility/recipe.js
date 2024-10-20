@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const fetch = require('node-fetch');
 const config = require('../../config.json');
+const savedRecipes = {};
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -40,7 +41,7 @@ module.exports = {
                 .setTimestamp();
             
             await interaction.reply({ embeds: [embed] });
-        } 
+        }
         else if (ingredients){
             await interaction.reply(`Searching for recipes with: ${ingredients}`);
             const recipes = await getRecipes(ingredients);
@@ -129,15 +130,19 @@ async function pageNav(interaction, recipes, userIngredients){
     });
 }
 
-
 // use Spoonacular API to get recipes based on ingreds and prep/cook time
-async function getRecipes(ingredients){
+async function getRecipes(ingredients) {
     const apiKey = config.apiKey; 
     const url = `https://api.spoonacular.com/recipes/findByIngredients?ingredients=${ingredients}&number=5&ranking=1&ignorePantry=true&apiKey=${apiKey}`;
 
-    try{
+    try {
         const response = await fetch(url);
         const recipes = await response.json();
+
+        if (!Array.isArray(recipes)) {
+            console.error('Unexpected response format:', recipes);
+            return []; 
+        }
 
         const detailedRecipes = await Promise.all(recipes.map(async recipe => {
             const recipeId = recipe.id;
@@ -149,17 +154,18 @@ async function getRecipes(ingredients){
                 title: detailData.title,
                 image: detailData.image,
                 ingredients: detailData.extendedIngredients.map(ing => ing.name),
-                id: detailData.id // Include the ID for the embed
+                id: detailData.id 
             };
         }));
 
         return detailedRecipes;
     } 
-    catch (error){
+    catch (error) {
         console.error('Error fetching recipes:', error);
         return [];
     }
 }
+
 
 // recipe info //
 async function getRecipeDetails(recipeId){
