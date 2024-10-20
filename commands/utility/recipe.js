@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const fetch = require('node-fetch');
 const config = require('../../config.json');
+const savedRecipes = {};
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -35,12 +36,17 @@ module.exports = {
                 .setColor(0x4CAF50)
                 .setTitle(recipeDetails.title || 'Title not available')
                 .setImage(recipeDetails.image || 'https://example.com/default-image.jpg')
-                .setDescription(`**Ingredients:**\n${recipeDetails.extendedIngredients.map(ing => `${ing.name}: ${ing.amount} ${ing.unit}`).join('\n')}\n\n**Instructions:**\n${recipeDetails.instructions || 'No instructions available.'}`)
+                // .setDescription(`**Ingredients:**\n${recipeDetails.extendedIngredients.map(ing => `${ing.name}: ${ing.amount} ${ing.unit}`).join('\n')}\n\n**Instructions:**\n${recipeDetails.instructions || 'No instructions available.'}`)
+                .setDescription(
+                    `**Preparation Time:** ${recipeDetails.readyInMinutes ? `${recipeDetails.readyInMinutes} minutes` : 'Not available'}\n\n` +
+                    `**Ingredients:**\n${recipeDetails.extendedIngredients.map(ing => `${ing.name}: ${ing.amount} ${ing.unit}`).join('\n')}\n\n` +
+                    `**Instructions:**\n${recipeDetails.instructions || 'No instructions available.'}`
+                )
                 .setFooter({ text: `Recipe ID: ${recipeDetails.id}` })
                 .setTimestamp();
             
             await interaction.reply({ embeds: [embed] });
-        } 
+        }
         else if (ingredients){
             await interaction.reply(`Searching for recipes with: ${ingredients}`);
             const recipes = await getRecipes(ingredients);
@@ -91,7 +97,7 @@ function embedDisplay(recipe, currentIndex, totalRecipes, userIngredients){
         .setColor(0x4287f5)
         .setTitle(recipe.title || 'Title not available')
         .setImage(recipe.image || 'https://example.com/default-image.jpg')
-        .setDescription(`**Ingredients:** ${ingredientsList}\n\n**Shopping List:**\n${shoppingList}\n\nFor more info, use \`/recipe id: ${recipe.id}\``)
+        .setDescription(`**Ingredients:** ${ingredientsList}\n\n**Need to buy:**\n${shoppingList}\n\nFor more info, use \`/recipe id: ${recipe.id}\``)
         .setFooter({ text: `Recipe ${currentIndex} of ${totalRecipes} | ID: ${recipe.id}` });
     return embed;
 }
@@ -129,15 +135,19 @@ async function pageNav(interaction, recipes, userIngredients){
     });
 }
 
-
 // use Spoonacular API to get recipes based on ingreds and prep/cook time
-async function getRecipes(ingredients){
+async function getRecipes(ingredients) {
     const apiKey = config.apiKey; 
     const url = `https://api.spoonacular.com/recipes/findByIngredients?ingredients=${ingredients}&number=5&ranking=1&ignorePantry=true&apiKey=${apiKey}`;
 
-    try{
+    try {
         const response = await fetch(url);
         const recipes = await response.json();
+
+        if (!Array.isArray(recipes)) {
+            console.error('Unexpected response format:', recipes);
+            return []; 
+        }
 
         const detailedRecipes = await Promise.all(recipes.map(async recipe => {
             const recipeId = recipe.id;
@@ -149,17 +159,18 @@ async function getRecipes(ingredients){
                 title: detailData.title,
                 image: detailData.image,
                 ingredients: detailData.extendedIngredients.map(ing => ing.name),
-                id: detailData.id // Include the ID for the embed
+                id: detailData.id 
             };
         }));
 
         return detailedRecipes;
     } 
-    catch (error){
+    catch (error) {
         console.error('Error fetching recipes:', error);
         return [];
     }
 }
+
 
 // recipe info //
 async function getRecipeDetails(recipeId){
@@ -172,7 +183,15 @@ async function getRecipeDetails(recipeId){
             throw new Error(`API error: ${response.statusText}`);
         }
         const recipe = await response.json();
-        return recipe;
+        // return recipe;
+        return {
+            title: recipe.title,
+            image: recipe.image,
+            extendedIngredients: recipe.extendedIngredients,
+            instructions: recipe.instructions,
+            readyInMinutes: recipe.readyInMinutes,
+            id: recipe.id
+        };
     } 
     catch (error){
         console.error('Error fetching recipe details:', error);
