@@ -5,7 +5,7 @@ const config = require('../../config.json');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('recipe')
+        .setName('recipez')
         .setDescription('Find possible recipes with available ingredients!')
         .addStringOption(option => 
             option.setName('ingredients')
@@ -36,6 +36,10 @@ module.exports = {
                         .setCustomId('next')
                         .setLabel('Next')
                         .setStyle(ButtonStyle.Primary)
+                    // new ButtonBuilder()
+                    //     .setCustomId('Details')
+                    //     .setLabel('Details')
+                    //     .setStyle(ButtonStyle.Secondary)
                 );
 
             await interaction.followUp({ embeds: [embed], components: [row] });
@@ -63,6 +67,71 @@ function embedDisplay(recipe, currentIndex, totalRecipes) {
     return embed;
 }
 
+async function detailsButton(interaction, recipe) {
+    try {
+        // Create a new embed with the details of the recipe
+        const ingredientsList = recipe.ingredients && recipe.ingredients.length > 0 
+            ? recipe.ingredients.join(', ') 
+            : 'Ingredients data not available';
+
+        const instructions = recipe.instructions || 'Instructions not available';
+
+        const detailsEmbed = new EmbedBuilder()
+            .setTitle(`Details for ${recipe.title}`)
+            .setDescription(`**Ingredients:**\n${ingredientsList}\n\n**Instructions:**\n${instructions}`)
+            .setImage(recipe.image)
+            .setFooter({ text: 'Recipe Details' });
+
+        // Create a row with a "Back" button
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder()
+                    .setCustomId('back')
+                    .setLabel('Back')
+                    .setStyle(ButtonStyle.Secondary)
+            );
+        
+            return detailsEmbed;
+
+        // // Update the interaction to show the details page
+        // await interaction.update({ embeds: [detailsEmbed], components: [row] });
+
+
+        // Set up a collector to handle the "Back" button
+        // const filter = i => i.customId === 'back' && i.user.id === interaction.user.id;
+        // const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 });
+
+        // collector.on('collect', async i => {
+        //     const embed = embedDisplay(recipe, 1, 1); // Display the single recipe again
+        //     const row = new ActionRowBuilder()
+        //         .addComponents(
+        //             new ButtonBuilder()
+        //                 .setCustomId('prev')
+        //                 .setLabel('Previous')
+        //                 .setStyle(ButtonStyle.Primary)
+        //                 .setDisabled(true),
+        //             new ButtonBuilder()
+        //                 .setCustomId('next')
+        //                 .setLabel('Next')
+        //                 .setStyle(ButtonStyle.Primary)
+        //                 .setDisabled(true),
+        //             new ButtonBuilder()
+        //                 .setCustomId('details')
+        //                 .setLabel('Details')
+        //                 .setStyle(ButtonStyle.Secondary)
+        //         );
+        //     await i.update({ embeds: [embed], components: [row] });
+        // });
+    } catch (error) {
+        console.error('Error updating interaction:', error);
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp({ content: 'There was an error showing the details.', ephemeral: true });
+        } else {
+            await interaction.reply({ content: 'There was an error showing the details.', ephemeral: true });
+        }
+    }
+}
+
 // left and right buttons for page navigation //
 async function pageNav(interaction, recipes) {
     let currentIndex = 0;
@@ -75,6 +144,12 @@ async function pageNav(interaction, recipes) {
         } 
         else if (i.customId === 'prev') {
             currentIndex = Math.max(currentIndex - 1, 0);
+        }
+        else if (i.customId === 'Details') {
+            await detailsButton(i, recipes[currentIndex]);
+        }
+        else {
+            console.log('No Interaction');
         }
 
         const embed = embedDisplay(recipes[currentIndex], currentIndex + 1, recipes.length);
@@ -89,7 +164,11 @@ async function pageNav(interaction, recipes) {
                     .setCustomId('next')
                     .setLabel('Next')
                     .setStyle(ButtonStyle.Primary)
-                    .setDisabled(currentIndex === recipes.length - 1)
+                    .setDisabled(currentIndex === recipes.length - 1),
+                new ButtonBuilder()
+                    .setCustomId('details')
+                    .setLabel('Details')
+                    .setStyle(ButtonStyle.Secondary)    
             );
         await i.update({ embeds: [embed], components: [row] });
     });
