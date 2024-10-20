@@ -19,6 +19,11 @@ module.exports = {
         const ingredients = interaction.options.getString('ingredients');
         const recipeId = interaction.options.getInteger('id');
 
+        if (!ingredients && !recipeId) {
+            await interaction.reply('Please add some ingredients or enter a recipe ID');
+            return;
+        }
+        
         if (recipeId) {
             const recipeDetails = await getRecipeDetails(recipeId);
             if (!recipeDetails) {
