@@ -92,7 +92,7 @@ function embedDisplay(recipe, currentIndex, totalRecipes, userIngredients){
         .setColor(0x4287f5)
         .setTitle(recipe.title || 'Title not available')
         .setImage(recipe.image || 'https://example.com/default-image.jpg')
-        .setDescription(`**Ingredients:** ${ingredientsList}\n\n**Shopping List:**\n${shoppingList}\n\nFor more info, use \`/recipe id: ${recipe.id}\``)
+        .setDescription(`**Ingredients:** ${ingredientsList}\n\n**Need to buy:**\n${shoppingList}\n\nFor more info, use \`/recipe id: ${recipe.id}\``)
         .setFooter({ text: `Recipe ${currentIndex} of ${totalRecipes} | ID: ${recipe.id}` });
     return embed;
 }
