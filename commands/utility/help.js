@@ -20,7 +20,7 @@ module.exports = {
             .setTitle('Available Commands')
             .setDescription('Here is a list of all available commands and their descriptions:')
             .setTimestamp()
-            .setFooter({ text: 'Recipe Buddy\'s Commands'});
+            .setFooter({ text: 'Meal Manager\'s Commands'});
 
         // Create a string to hold all commands and descriptions
         let commandList = '';
