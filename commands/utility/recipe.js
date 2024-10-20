@@ -36,7 +36,12 @@ module.exports = {
                 .setColor(0x4CAF50)
                 .setTitle(recipeDetails.title || 'Title not available')
                 .setImage(recipeDetails.image || 'https://example.com/default-image.jpg')
-                .setDescription(`**Ingredients:**\n${recipeDetails.extendedIngredients.map(ing => `${ing.name}: ${ing.amount} ${ing.unit}`).join('\n')}\n\n**Instructions:**\n${recipeDetails.instructions || 'No instructions available.'}`)
+                // .setDescription(`**Ingredients:**\n${recipeDetails.extendedIngredients.map(ing => `${ing.name}: ${ing.amount} ${ing.unit}`).join('\n')}\n\n**Instructions:**\n${recipeDetails.instructions || 'No instructions available.'}`)
+                .setDescription(
+                    `**Preparation Time:** ${recipeDetails.readyInMinutes ? `${recipeDetails.readyInMinutes} minutes` : 'Not available'}\n\n` +
+                    `**Ingredients:**\n${recipeDetails.extendedIngredients.map(ing => `${ing.name}: ${ing.amount} ${ing.unit}`).join('\n')}\n\n` +
+                    `**Instructions:**\n${recipeDetails.instructions || 'No instructions available.'}`
+                )
                 .setFooter({ text: `Recipe ID: ${recipeDetails.id}` })
                 .setTimestamp();
             
@@ -178,7 +183,15 @@ async function getRecipeDetails(recipeId){
             throw new Error(`API error: ${response.statusText}`);
         }
         const recipe = await response.json();
-        return recipe;
+        // return recipe;
+        return {
+            title: recipe.title,
+            image: recipe.image,
+            extendedIngredients: recipe.extendedIngredients,
+            instructions: recipe.instructions,
+            readyInMinutes: recipe.readyInMinutes,
+            id: recipe.id
+        };
     } 
     catch (error){
         console.error('Error fetching recipe details:', error);
