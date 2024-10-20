@@ -32,6 +32,7 @@ module.exports = {
             }
 
             const embed = new EmbedBuilder()
+                .setColor(0x4CAF50)
                 .setTitle(recipeDetails.title || 'Title not available')
                 .setImage(recipeDetails.image || 'https://example.com/default-image.jpg')
                 .setDescription(`**Ingredients:**\n${recipeDetails.extendedIngredients.map(ing => `${ing.name}: ${ing.amount} ${ing.unit}`).join('\n')}\n\n**Instructions:**\n${recipeDetails.instructions || 'No instructions available.'}`)
@@ -80,9 +81,10 @@ function embedDisplay(recipe, currentIndex, totalRecipes){
         ? recipe.ingredients.join(', ') : 'Ingredients data not available';
 
     const embed = new EmbedBuilder()
+        .setColor(0x4287f5)
         .setTitle(recipe.title || 'Title not available')
         .setImage(recipe.image || 'https://example.com/default-image.jpg')
-        .setDescription(`Ingredients: ${ingredientsList}\n\nFor more info, use /recipe id: ${recipe.id}`)
+        .setDescription(`Ingredients: ${ingredientsList}\n\nFor more info, use \`/recipe id: ${recipe.id}\``)
         .setFooter({ text: `Recipe ${currentIndex} of ${totalRecipes} | ID: ${recipe.id}` });
     return embed;
 }
