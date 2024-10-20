@@ -47,7 +47,7 @@ module.exports = {
             const limitedRecipes = recipes.slice(0, 5);
 
             if (limitedRecipes.length > 0){
-                const embed = embedDisplay(limitedRecipes[0], 1, limitedRecipes.length);
+                const embed = embedDisplay(limitedRecipes[0], 1, limitedRecipes.length, ingredients);
                 const row = new ActionRowBuilder()
                     .addComponents(
                         new ButtonBuilder()
@@ -62,7 +62,7 @@ module.exports = {
                     );
 
                 await interaction.followUp({ embeds: [embed], components: [row] });
-                pageNav(interaction, limitedRecipes);
+                pageNav(interaction, limitedRecipes, ingredients);
             } 
             else{
                 await interaction.followUp('No recipes were found with the given ingredients');
@@ -76,22 +76,29 @@ module.exports = {
 
 
 // embed it so prettier than just plain text //
-function embedDisplay(recipe, currentIndex, totalRecipes){
-    const ingredientsList = recipe.ingredients && recipe.ingredients.length > 0 
-        ? recipe.ingredients.join(', ') : 'Ingredients data not available';
+function embedDisplay(recipe, currentIndex, totalRecipes, userIngredients){
+    const userIngredientsList = userIngredients.split(',').map(ing => ing.trim().toLowerCase());
+
+    const recipeIngredients = recipe.ingredients.map(ing => ing.toLowerCase());
+    const missingIngredients = recipeIngredients.filter(ing => !userIngredientsList.includes(ing));
+
+    const ingredientsList = recipeIngredients.length > 0 ? recipeIngredients.join(', ') : 'Ingredients data not available';
+    const shoppingList = missingIngredients.length > 0 
+        ? missingIngredients.map(ing => `• ${ing}`).join('\n') 
+        : 'You have all the ingredients!';
 
     const embed = new EmbedBuilder()
         .setColor(0x4287f5)
         .setTitle(recipe.title || 'Title not available')
         .setImage(recipe.image || 'https://example.com/default-image.jpg')
-        .setDescription(`Ingredients: ${ingredientsList}\n\nFor more info, use \`/recipe id: ${recipe.id}\``)
+        .setDescription(`**Ingredients:** ${ingredientsList}\n\n**Shopping List:**\n${shoppingList}\n\nFor more info, use \`/recipe id: ${recipe.id}\``)
         .setFooter({ text: `Recipe ${currentIndex} of ${totalRecipes} | ID: ${recipe.id}` });
     return embed;
 }
 
 
 // page navigation w/ buttons //
-async function pageNav(interaction, recipes){
+async function pageNav(interaction, recipes, userIngredients){
     let currentIndex = 0;
     const filter = i => ['prev', 'next'].includes(i.customId) && i.user.id === interaction.user.id;
     const collector = interaction.channel.createMessageComponentCollector({ filter, time: 60000 });
@@ -104,7 +111,7 @@ async function pageNav(interaction, recipes){
             currentIndex = Math.max(currentIndex - 1, 0);
         }
 
-        const embed = embedDisplay(recipes[currentIndex], currentIndex + 1, recipes.length);
+        const embed = embedDisplay(recipes[currentIndex], currentIndex + 1, recipes.length, userIngredients);
         const row = new ActionRowBuilder()
             .addComponents(
                 new ButtonBuilder()
