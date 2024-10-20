@@ -41,7 +41,7 @@ module.exports = {
 
     async execute(interaction) {
         // Define a whitelist of specific commands you want to show
-        const allowedCommands = ['greet', 'recipe', 'mealplan', 'winepairing'];
+        const allowedCommands = ['greet', 'mealplan', 'recipe', 'timer', 'winepairing'];
 
         // Create the help embed
         const helpEmbed = new EmbedBuilder()

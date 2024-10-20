@@ -21,7 +21,7 @@ module.exports = {
         const embed = new EmbedBuilder()
             .setTitle('⏳ Timer Started')
             .setDescription(`Time's up in <t:${endTime}:R>`)
-            .setFooter({ text: 'Timer ends: ' })
+            .setFooter({ text: 'Timer ends ' })
             .setTimestamp(endTime * 1000);
 
         await interaction.reply({ embeds: [embed] });
